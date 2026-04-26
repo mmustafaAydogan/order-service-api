@@ -175,6 +175,7 @@ class QuoteService
     private function recalculate(Quote $quote): void
     {
         $subtotal = 0;
+        /** @var QuoteItem $item */
         foreach ($quote->getItems() as $item) {
             $subtotal += $item->getRowTotal();
         }
