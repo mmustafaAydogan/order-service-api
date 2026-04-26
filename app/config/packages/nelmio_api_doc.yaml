@@ -10,8 +10,187 @@ nelmio_api_doc:
                     type: apiKey
                     in: header
                     name: X-AUTH-TOKEN
+            schemas:
+                AddItemRequest:
+                    type: object
+                    required:
+                        - product_id
+                        - qty
+                    properties:
+                        product_id:
+                            type: integer
+                            example: 1
+                        qty:
+                            type: integer
+                            example: 2
+
+                RemoveItemsRequest:
+                    type: object
+                    required:
+                        - items
+                    properties:
+                        items:
+                            type: array
+                            items:
+                                type: object
+                                required:
+                                    - product_id
+                                properties:
+                                    product_id:
+                                        type: integer
+                                        example: 1
+                                    qty:
+                                        type: integer
+                                        example: 1
+                                        nullable: true
+
+                ErrorResponse:
+                    type: object
+                    properties:
+                        error:
+                            type: string
+                            example: 'No active quote found.'
+
+                MessageResponse:
+                    type: object
+                    properties:
+                        message:
+                            type: string
+                            example: 'Quote is now empty and has been removed.'
+
+                ProductResponse:
+                    type: object
+                    properties:
+                        id:
+                            type: integer
+                            example: 1
+                        title:
+                            type: string
+                            example: 'İnce Memed'
+                        listPrice:
+                            type: number
+                            example: 48.75
+
+                QuoteItemResponse:
+                    type: object
+                    properties:
+                        id:
+                            type: integer
+                            example: 1
+                        product:
+                            $ref: '#/components/schemas/ProductResponse'
+                        qty:
+                            type: integer
+                            example: 2
+                        price:
+                            type: number
+                            example: 48.7500
+                        rowTotal:
+                            type: number
+                            example: 97.5000
+                        discountAmount:
+                            type: number
+                            example: 14.6250
+
+                QuoteResponse:
+                    type: object
+                    properties:
+                        id:
+                            type: integer
+                            example: 1
+                        customerId:
+                            type: integer
+                            example: 1
+                        subtotal:
+                            type: number
+                            example: 97.5000
+                        discountAmount:
+                            type: number
+                            example: 14.6250
+                        shippingAmount:
+                            type: number
+                            example: 0.0
+                        grandTotal:
+                            type: number
+                            example: 82.8750
+                        appliedCampaignName:
+                            type: string
+                            nullable: true
+                            example: 'Roman Kategorisi %15 İndirim'
+                        items:
+                            type: array
+                            items:
+                                $ref: '#/components/schemas/QuoteItemResponse'
+                        createdAt:
+                            type: string
+                            example: '2026-04-24T10:00:00+00:00'
+                        updatedAt:
+                            type: string
+                            example: '2026-04-24T10:05:00+00:00'
+
+                OrderItemResponse:
+                    type: object
+                    properties:
+                        id:
+                            type: integer
+                            example: 1
+                        productId:
+                            type: integer
+                            example: 1
+                        productTitle:
+                            type: string
+                            example: 'İnce Memed'
+                        qty:
+                            type: integer
+                            example: 2
+                        price:
+                            type: number
+                            example: 48.7500
+                        rowTotal:
+                            type: number
+                            example: 97.5000
+                        discountAmount:
+                            type: number
+                            example: 14.6250
+
+                OrderResponse:
+                    type: object
+                    properties:
+                        id:
+                            type: integer
+                            example: 1
+                        orderNumber:
+                            type: string
+                            example: 'ORD0000001'
+                        customerId:
+                            type: integer
+                            example: 1
+                        subtotal:
+                            type: number
+                            example: 97.5000
+                        discountAmount:
+                            type: number
+                            example: 14.6250
+                        shippingAmount:
+                            type: number
+                            example: 0.0
+                        grandTotal:
+                            type: number
+                            example: 82.8750
+                        appliedCampaignName:
+                            type: string
+                            nullable: true
+                            example: 'Roman Kategorisi %15 İndirim'
+                        items:
+                            type: array
+                            items:
+                                $ref: '#/components/schemas/OrderItemResponse'
+                        createdAt:
+                            type: string
+                            example: '2026-04-24T10:00:00+00:00'
+
         security:
             - ApiKey: []
     areas:
         path_patterns:
-            - ^/api(?!/doc) # /api altındaki tüm rotalar, /api/doc hariç
+            - ^/api(?!/doc)

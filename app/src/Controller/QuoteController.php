@@ -9,6 +9,7 @@ use App\Request\AddItemRequest;
 use App\Request\RemoveItemsRequest;
 use App\Security\ApiUser;
 use App\Service\QuoteService;
+use OpenApi\Attributes as OA;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
@@ -16,6 +17,7 @@ use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
 use Symfony\Component\Routing\Attribute\Route;
 
 #[Route('/api/quote')]
+#[OA\Tag(name: 'Quote')]
 class QuoteController extends AbstractController
 {
     private const array GROUPS = ['groups' => ['quote:read', 'quote_item:read', 'product:read']];
@@ -25,6 +27,18 @@ class QuoteController extends AbstractController
     ) {}
 
     #[Route('/add-item', methods: ['POST'])]
+    #[OA\Post(
+        summary: 'Add item to quote',
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(ref: '#/components/schemas/AddItemRequest')
+        ),
+        responses: [
+            new OA\Response(response: 200, description: 'Item added', content: new OA\JsonContent(ref: '#/components/schemas/QuoteResponse')),
+            new OA\Response(response: 404, description: 'Product not found', content: new OA\JsonContent(ref: '#/components/schemas/ErrorResponse')),
+            new OA\Response(response: 422, description: 'Insufficient stock', content: new OA\JsonContent(ref: '#/components/schemas/ErrorResponse')),
+        ]
+    )]
     public function addItem(#[MapRequestPayload] AddItemRequest $request): JsonResponse
     {
         /** @var ApiUser $user */
@@ -42,6 +56,13 @@ class QuoteController extends AbstractController
     }
 
     #[Route('', methods: ['GET'])]
+    #[OA\Get(
+        summary: 'Get active quote',
+        responses: [
+            new OA\Response(response: 200, description: 'Active quote', content: new OA\JsonContent(ref: '#/components/schemas/QuoteResponse')),
+            new OA\Response(response: 404, description: 'No active quote found', content: new OA\JsonContent(ref: '#/components/schemas/ErrorResponse')),
+        ]
+    )]
     public function getQuote(): JsonResponse
     {
         /** @var ApiUser $user */
@@ -57,6 +78,26 @@ class QuoteController extends AbstractController
     }
 
     #[Route('/remove-items', methods: ['DELETE'])]
+    #[OA\Delete(
+        summary: 'Remove items from quote',
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(ref: '#/components/schemas/RemoveItemsRequest')
+        ),
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'Returns updated quote, or a message if quote is empty.',
+                content: new OA\JsonContent(
+                    oneOf: [
+                        new OA\Schema(ref: '#/components/schemas/QuoteResponse'),
+                        new OA\Schema(ref: '#/components/schemas/MessageResponse'),
+                    ]
+                )
+            ),
+            new OA\Response(response: 404, description: 'Quote or product not found', content: new OA\JsonContent(ref: '#/components/schemas/ErrorResponse')),
+        ]
+    )]
     public function removeItems(#[MapRequestPayload] RemoveItemsRequest $request): JsonResponse
     {
         /** @var ApiUser $user */
