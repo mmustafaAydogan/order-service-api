@@ -95,16 +95,18 @@ class OrderService
         }
     }
 
-    /**
-     * @param int $customerId
-     * @return array
-     */
-    public function getOrders(int $customerId): array
+    public function getOrders(int $customerId, int $page, int $limit): array
     {
-        return $this->orderRepository->findBy(
-            ['customerId' => $customerId],
-            ['createdAt' => 'DESC']
-        );
+        $paginator = $this->orderRepository->findPaginatedByCustomerId($customerId, $page, $limit);
+        $total = count($paginator);
+
+        return [
+            'orders'  => iterator_to_array($paginator),
+            'total' => $total,
+            'page'  => $page,
+            'limit' => $limit,
+            'pages' => (int) ceil($total / $limit),
+        ];
     }
 
     public function getOrder(int $customerId, string $orderNumber): Order

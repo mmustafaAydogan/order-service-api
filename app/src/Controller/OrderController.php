@@ -11,6 +11,7 @@ use App\Service\OrderService;
 use OpenApi\Attributes as OA;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
+use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 
@@ -55,25 +56,29 @@ class OrderController extends AbstractController
     #[Route('/list', methods: ['GET'])]
     #[OA\Get(
         summary: 'List all orders',
+        parameters: [
+            new OA\Parameter(name: 'page', in: 'query', required: false, schema: new OA\Schema(type: 'integer', default: 1, minimum: 1)),
+            new OA\Parameter(name: 'limit', description: 'Max 100', in: 'query', required: false, schema: new OA\Schema(type: 'integer', default: 10, minimum: 1, maximum: 100)),
+        ],
         responses: [
             new OA\Response(
                 response: 200,
-                description: 'List of orders',
-                content: new OA\JsonContent(
-                    type: 'array',
-                    items: new OA\Items(ref: '#/components/schemas/OrderResponse')
-                )
+                description: 'Paginated list of orders',
+                content: new OA\JsonContent(ref: '#/components/schemas/PaginatedOrderResponse')
             ),
         ]
     )]
-    public function list(): JsonResponse
+    public function list(Request $request): JsonResponse
     {
         /** @var ApiUser $user */
         $user = $this->getUser();
 
-        $orders = $this->orderService->getOrders($user->getCustomerId());
+        $page  = max(1, (int) $request->query->get('page', 1));
+        $limit = min(100, max(1, (int) $request->query->get('limit', 10)));
 
-        return $this->json($orders, context: self::GROUPS);
+        $result = $this->orderService->getOrders($user->getCustomerId(), $page, $limit);
+
+        return $this->json($result, context: self::GROUPS);
     }
 
     #[Route('/show/{orderNumber}', methods: ['GET'])]

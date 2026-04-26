@@ -9,7 +9,7 @@ nelmio_api_doc:
                 ApiKey:
                     type: apiKey
                     in: header
-                    name: X-AUTH-TOKEN
+                    name: X-API-Token
             schemas:
                 AddItemRequest:
                     type: object
@@ -43,6 +43,29 @@ nelmio_api_doc:
                                         type: integer
                                         example: 1
                                         nullable: true
+
+                PaginatedOrderResponse:
+                    type: object
+                    properties:
+                        orders:
+                            type: array
+                            items:
+                                $ref: '#/components/schemas/OrderResponse'
+                        total:
+                            type: integer
+                            example: 25
+                        page:
+                            type: integer
+                            example: 1
+                            minimum: 1
+                        limit:
+                            type: integer
+                            example: 10
+                            maximum: 100
+                            minimum: 1
+                        pages:
+                            type: integer
+                            example: 3
 
                 ErrorResponse:
                     type: object
