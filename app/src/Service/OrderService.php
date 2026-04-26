@@ -13,6 +13,7 @@ use App\Repository\Order\OrderSequenceRepository;
 use App\Repository\ProductRepository;
 use App\Repository\Quote\QuoteRepository;
 use Doctrine\ORM\EntityManagerInterface;
+use Psr\Cache\CacheItemPoolInterface;
 
 class OrderService
 {
@@ -22,6 +23,7 @@ class OrderService
         private readonly OrderRepository $orderRepository,
         private readonly OrderSequenceRepository $orderSequenceRepository,
         private readonly ProductRepository $productRepository,
+        private readonly CacheItemPoolInterface $redisCache,
     ) {}
 
     public function createFromQuote(int $customerId): Order
@@ -107,6 +109,23 @@ class OrderService
 
     public function getOrder(int $customerId, string $orderNumber): Order
     {
+        $cacheKey = sprintf('order_%d_%s', $customerId, $orderNumber);
+
+        $item = $this->redisCache->getItem($cacheKey);
+
+        if ($item->isHit()) {
+            return $item->get();
+        }
+
+        $order = $this->findOrder($customerId, $orderNumber);
+        $item->set($order)->expiresAfter(3600);
+        $this->redisCache->save($item);
+
+        return $order;
+    }
+
+    private function findOrder(int $customerId, string $orderNumber): Order
+    {
         $order = $this->orderRepository->findOneBy([
             'orderNumber' => $orderNumber,
             'customerId'  => $customerId,
@@ -115,6 +134,7 @@ class OrderService
         if (!$order) {
             throw new OrderNotFoundException('Order not found.');
         }
+        $order->getItems();
 
         return $order;
     }
