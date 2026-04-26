@@ -39,38 +39,59 @@ class QuoteService
         return $quote;
     }
 
-    public function addItem(int $customerId, int $productId, int $qty): Quote
+    public function addItems(int $customerId, array $items): Quote
     {
-        $product = $this->productRepository->find($productId);
+        $aggregatedProducts = [];
+        foreach ($items as $item) {
+            $pId = $item['product_id'];
+            $aggregatedProducts[$pId] = ($aggregatedProducts[$pId] ?? 0) + $item['qty'];
+        }
 
-        if (!$product) {
-            throw new ProductNotFoundException('Product not found.');
+        $products = $this->productRepository->findBy(['id' => array_keys($aggregatedProducts)]);
+
+        $productMap = [];
+        foreach ($products as $product) {
+            $productMap[$product->getId()] = $product;
+        }
+
+        foreach (array_keys($aggregatedProducts) as $productId) {
+            if (!isset($productMap[$productId])) {
+                throw new ProductNotFoundException(sprintf('Product with id %d not found.', $productId));
+            }
         }
 
         $quote = $this->getOrCreateQuote($customerId);
 
-        $existingItem = $this->findItem($quote, $product);
+        foreach ($aggregatedProducts as $productId => $qty) {
+            $product = $productMap[$productId];
+            $existingItem = $this->findItem($quote, $product);
+            $totalQty = $qty + ($existingItem ? $existingItem->getQty() : 0);
 
-        $totalQty = $qty + ($existingItem ? $existingItem->getQty() : 0);
-
-        if ($totalQty > $product->getStockQuantity()) {
-            throw new InsufficientStockException(
-                sprintf('Insufficient stock for "%s". Available Stock: %d.', $product->getTitle(), $product->getStockQuantity())
-            );
+            if ($totalQty > $product->getStockQuantity()) {
+                throw new InsufficientStockException(
+                    sprintf('Insufficient stock for "%s". Available Stock: %d.', $product->getTitle(), $product->getStockQuantity())
+                );
+            }
         }
 
-        if ($existingItem) {
-            $existingItem->setQty($totalQty);
-            $existingItem->setRowTotal($existingItem->getPrice() * $totalQty);
-        } else {
-            $item = new QuoteItem();
-            $item->setQuote($quote);
-            $item->setProduct($product);
-            $item->setPrice($product->getListPrice());
-            $item->setQty($qty);
-            $item->setRowTotal($product->getListPrice() * $qty);
-            $quote->addItem($item);
-            $this->em->persist($item);
+        foreach ($aggregatedProducts as $productId => $qty) {
+            $product = $productMap[$productId];
+            $existingItem = $this->findItem($quote, $product);
+            $totalQty = $qty + ($existingItem ? $existingItem->getQty() : 0);
+
+            if ($existingItem) {
+                $existingItem->setQty($totalQty);
+                $existingItem->setRowTotal($existingItem->getPrice() * $totalQty);
+            } else {
+                $item = new QuoteItem();
+                $item->setQuote($quote);
+                $item->setProduct($product);
+                $item->setPrice($product->getListPrice());
+                $item->setQty($qty);
+                $item->setRowTotal($product->getListPrice() * $qty);
+                $quote->addItem($item);
+                $this->em->persist($item);
+            }
         }
 
         $this->recalculate($quote);

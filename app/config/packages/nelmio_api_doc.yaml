@@ -11,18 +11,26 @@ nelmio_api_doc:
                     in: header
                     name: X-API-Token
             schemas:
-                AddItemRequest:
+                AddItemsRequest:
                     type: object
                     required:
-                        - product_id
-                        - qty
+                        - items
                     properties:
-                        product_id:
-                            type: integer
-                            example: 1
-                        qty:
-                            type: integer
-                            example: 2
+                        items:
+                            type: array
+                            minItems: 1
+                            items:
+                                type: object
+                                required:
+                                    - product_id
+                                    - qty
+                                properties:
+                                    product_id:
+                                        type: integer
+                                        example: 1
+                                    qty:
+                                        type: integer
+                                        example: 2
 
                 RemoveItemsRequest:
                     type: object

@@ -5,7 +5,7 @@ namespace App\Controller;
 use App\Exception\InsufficientStockException;
 use App\Exception\ProductNotFoundException;
 use App\Exception\QuoteNotFoundException;
-use App\Request\AddItemRequest;
+use App\Request\AddItemsRequest;
 use App\Request\RemoveItemsRequest;
 use App\Security\ApiUser;
 use App\Service\QuoteService;
@@ -26,26 +26,26 @@ class QuoteController extends AbstractController
         private readonly QuoteService $quoteService,
     ) {}
 
-    #[Route('/add-item', methods: ['POST'])]
+    #[Route('/add-items', methods: ['POST'])]
     #[OA\Post(
-        summary: 'Add item to quote',
+        summary: 'Add items to quote',
         requestBody: new OA\RequestBody(
             required: true,
-            content: new OA\JsonContent(ref: '#/components/schemas/AddItemRequest')
+            content: new OA\JsonContent(ref: '#/components/schemas/AddItemsRequest')
         ),
         responses: [
-            new OA\Response(response: 200, description: 'Item added', content: new OA\JsonContent(ref: '#/components/schemas/QuoteResponse')),
+            new OA\Response(response: 200, description: 'Items added', content: new OA\JsonContent(ref: '#/components/schemas/QuoteResponse')),
             new OA\Response(response: 404, description: 'Product not found', content: new OA\JsonContent(ref: '#/components/schemas/ErrorResponse')),
             new OA\Response(response: 422, description: 'Insufficient stock', content: new OA\JsonContent(ref: '#/components/schemas/ErrorResponse')),
         ]
     )]
-    public function addItem(#[MapRequestPayload] AddItemRequest $request): JsonResponse
+    public function addItems(#[MapRequestPayload] AddItemsRequest $request): JsonResponse
     {
         /** @var ApiUser $user */
         $user = $this->getUser();
 
         try {
-            $quote = $this->quoteService->addItem($user->getCustomerId(), $request->productId, $request->qty);
+            $quote = $this->quoteService->addItems($user->getCustomerId(), $request->items);
         } catch (ProductNotFoundException $e) {
             return new JsonResponse(['error' => $e->getMessage()], Response::HTTP_NOT_FOUND);
         } catch (InsufficientStockException $e) {
