@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+set -e
+
+docker compose up -d --build
+
+echo "Composer install started"
+docker compose exec php composer install
+echo "Composer install done."
+
+if ! grep -q "orderService" /etc/hosts; then
+    echo "Adding orderService to /etc/hosts"
+    sudo bash -c 'echo "127.0.0.1 orderService" >> /etc/hosts'
+fi
+
+echo "Running migrations"
+docker compose exec php php bin/console doctrine:migrations:migrate --no-interaction
+echo "Migrations done."
+
+echo "Seeding database"
+docker compose exec php php bin/console app:seed /var/www/html/data
+echo "Seed done."
