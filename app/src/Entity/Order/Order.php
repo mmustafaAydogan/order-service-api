@@ -2,6 +2,8 @@
 
 namespace App\Entity\Order;
 
+use App\Enum\AddressType;
+use App\Helper\Address;
 use App\Repository\Order\OrderRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
@@ -11,6 +13,7 @@ use Symfony\Component\Serializer\Attribute\Groups;
 #[ORM\Entity(repositoryClass: OrderRepository::class)]
 #[ORM\Table(name: 'orders')]
 #[ORM\Index(columns: ['customer_id', 'created_at'], name: 'idx_orders_customer_created')]
+#[ORM\Cache(usage: 'READ_ONLY')]
 class Order
 {
     #[ORM\Id]
@@ -52,8 +55,14 @@ class Order
     private ?string $appliedCampaignName = null;
 
     #[ORM\OneToMany(targetEntity: OrderItem::class, mappedBy: 'order', cascade: ['persist'])]
+    #[ORM\Cache(usage: 'READ_ONLY')]
     #[Groups(['order:read'])]
     private Collection $items;
+
+    #[ORM\OneToMany(targetEntity: OrderAddress::class, mappedBy: 'order', cascade: ['persist'])]
+    #[ORM\Cache(usage: 'READ_ONLY')]
+    #[Groups(['order:read'])]
+    private Collection $addresses;
 
     #[ORM\Column]
     #[Groups(['order:read'])]
@@ -62,6 +71,7 @@ class Order
     public function __construct()
     {
         $this->items = new ArrayCollection();
+        $this->addresses = new ArrayCollection();
         $this->createdAt = new \DateTimeImmutable();
     }
 
@@ -162,6 +172,38 @@ class Order
     public function addItem(OrderItem $item): void
     {
         $this->items->add($item);
+    }
+
+    public function getAddresses(): Collection
+    {
+        return $this->addresses;
+    }
+
+    public function addBillingAddress(Address $data): void
+    {
+        $this->addresses->add($this->buildAddress(AddressType::Billing, $data));
+    }
+
+    public function addShippingAddress(Address $data): void
+    {
+        $this->addresses->add($this->buildAddress(AddressType::Shipping, $data));
+    }
+
+    private function buildAddress(AddressType $type, Address $data): OrderAddress
+    {
+        $address = new OrderAddress();
+        $address->setOrder($this);
+        $address->setAddressType($type);
+        $address->setFirstName($data->firstName);
+        $address->setLastName($data->lastName);
+        $address->setPhone($data->phone);
+        $address->setAddressLine($data->addressLine);
+        $address->setDistrict($data->district);
+        $address->setCity($data->city);
+        $address->setPostalCode($data->postalCode);
+        $address->setCountryCode($data->countryCode);
+
+        return $address;
     }
 
     public function getSequence(): OrderSequence

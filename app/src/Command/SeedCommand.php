@@ -4,6 +4,7 @@ namespace App\Command;
 
 use App\Entity\Author;
 use App\Entity\Category;
+use App\Entity\CustomerAddress;
 use App\Entity\Product;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Console\Attribute\AsCommand;
@@ -34,6 +35,7 @@ class SeedCommand extends Command
             $authorsMap = $this->seedAuthors($output, $dataDir);
             $categoriesMap = $this->seedCategories($output, $dataDir);
             $this->seedProducts($output, $dataDir, $authorsMap, $categoriesMap);
+            $this->seedCustomerAddresses($output);
         } catch (\Throwable $throwable) {
             $output->writeln(sprintf("%s <--> %s <--> %s", $throwable->getMessage(), $throwable->getFile(), $throwable->getLine()));
             return Command::FAILURE;
@@ -113,6 +115,36 @@ class SeedCommand extends Command
         }
         $this->em->flush();
         $output->writeln(sprintf('Seeded %d products.', count($data)));
+    }
+
+    private function seedCustomerAddresses(OutputInterface $output): void
+    {
+        if ($this->em->getRepository(CustomerAddress::class)->count() > 0) {
+            $output->writeln('Customer addresses already seeded, skipping.');
+            return;
+        }
+
+        $customers = [
+            1 => ['first_name' => 'Test', 'last_name' => 'User1', 'phone' => '05301112233', 'address_line' => 'Test Address 1', 'district' => 'Bağcılar', 'city' => 'İstanbul', 'postal_code' => '34200'],
+            2 => ['first_name' => 'Test', 'last_name' => 'User2', 'phone' => '05422223344', 'address_line' => 'Test Address 2', 'district' => 'Çankaya',  'city' => 'Ankara',   'postal_code' => '06420'],
+            3 => ['first_name' => 'Test', 'last_name' => 'User3', 'phone' => '05543334455', 'address_line' => 'Test Address 3', 'district' => 'Konak',    'city' => 'İzmir',    'postal_code' => '35250'],
+        ];
+
+        foreach ($customers as $customerId => $data) {
+            $address = new CustomerAddress();
+            $address->setCustomerId($customerId);
+            $address->setFirstName($data['first_name']);
+            $address->setLastName($data['last_name']);
+            $address->setPhone($data['phone']);
+            $address->setAddressLine($data['address_line']);
+            $address->setDistrict($data['district']);
+            $address->setCity($data['city']);
+            $address->setPostalCode($data['postal_code']);
+            $this->em->persist($address);
+        }
+
+        $this->em->flush();
+        $output->writeln(sprintf('Seeded customer addresses.'));
     }
 
     private function readJson(string $dataDir, string $filename): array

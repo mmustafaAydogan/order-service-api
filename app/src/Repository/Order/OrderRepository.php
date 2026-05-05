@@ -14,6 +14,18 @@ class OrderRepository extends ServiceEntityRepository
         parent::__construct($registry, Order::class);
     }
 
+    public function findOneByOrderNumber(int $customerId, string $orderNumber): ?Order
+    {
+        return $this->createQueryBuilder('o')
+            ->where('o.customerId = :customerId')
+            ->andWhere('o.orderNumber = :orderNumber')
+            ->setParameter('customerId', $customerId)
+            ->setParameter('orderNumber', $orderNumber)
+            ->getQuery()
+            ->setCacheable(true)
+            ->getOneOrNullResult();
+    }
+
     public function findPaginatedByCustomerId(int $customerId, int $page, int $limit): Paginator
     {
         $qb = $this->createQueryBuilder('ord')

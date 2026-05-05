@@ -184,6 +184,82 @@ nelmio_api_doc:
                             type: number
                             example: 14.6250
 
+                AddressRequest:
+                    type: object
+                    properties:
+                        first_name:
+                            type: string
+                            example: 'Test'
+                        last_name:
+                            type: string
+                            example: 'User1'
+                        phone:
+                            type: string
+                            example: '05301112233'
+                        address_line:
+                            type: string
+                            example: 'Test Address 1'
+                        district:
+                            type: string
+                            example: 'Bağcılar'
+                        city:
+                            type: string
+                            example: 'İstanbul'
+                        postal_code:
+                            type: string
+                            example: '34200'
+                        country_code:
+                            type: string
+                            example: 'TR'
+                            default: 'TR'
+
+                CreateOrderRequest:
+                    type: object
+                    properties:
+                        billing_address:
+                            nullable: true
+                            allOf:
+                                - $ref: '#/components/schemas/AddressRequest'
+                        shipping_address:
+                            nullable: true
+                            allOf:
+                                - $ref: '#/components/schemas/AddressRequest'
+
+                OrderAddressResponse:
+                    type: object
+                    properties:
+                        id:
+                            type: integer
+                            example: 1
+                        addressType:
+                            type: string
+                            enum: [billing, shipping]
+                            example: 'billing'
+                        firstName:
+                            type: string
+                            example: 'Test'
+                        lastName:
+                            type: string
+                            example: 'User1'
+                        phone:
+                            type: string
+                            example: '05301112233'
+                        addressLine:
+                            type: string
+                            example: 'Test Address 1'
+                        district:
+                            type: string
+                            example: 'Bağcılar'
+                        city:
+                            type: string
+                            example: 'İstanbul'
+                        postalCode:
+                            type: string
+                            example: '34200'
+                        countryCode:
+                            type: string
+                            example: 'TR'
+
                 OrderResponse:
                     type: object
                     properties:
@@ -216,6 +292,10 @@ nelmio_api_doc:
                             type: array
                             items:
                                 $ref: '#/components/schemas/OrderItemResponse'
+                        addresses:
+                            type: array
+                            items:
+                                $ref: '#/components/schemas/OrderAddressResponse'
                         createdAt:
                             type: string
                             example: '2026-04-24T10:00:00+00:00'

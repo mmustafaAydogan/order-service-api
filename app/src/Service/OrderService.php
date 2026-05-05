@@ -2,18 +2,20 @@
 
 namespace App\Service;
 
+use App\Helper\Address;
 use App\Entity\Order\Order;
 use App\Entity\Order\OrderItem;
 use App\Exception\EmptyQuoteException;
 use App\Exception\InsufficientStockException;
+use App\Exception\MissingBillingAddressException;
 use App\Exception\OrderNotFoundException;
 use App\Exception\QuoteNotFoundException;
+use App\Repository\CustomerAddressRepository;
 use App\Repository\Order\OrderRepository;
 use App\Repository\Order\OrderSequenceRepository;
 use App\Repository\ProductRepository;
 use App\Repository\Quote\QuoteRepository;
 use Doctrine\ORM\EntityManagerInterface;
-use Psr\Cache\CacheItemPoolInterface;
 
 class OrderService
 {
@@ -23,10 +25,10 @@ class OrderService
         private readonly OrderRepository $orderRepository,
         private readonly OrderSequenceRepository $orderSequenceRepository,
         private readonly ProductRepository $productRepository,
-        private readonly CacheItemPoolInterface $redisCache,
+        private readonly CustomerAddressRepository $customerAddressRepository,
     ) {}
 
-    public function createFromQuote(int $customerId): Order
+    public function createFromQuote(int $customerId, ?array $billing = null, ?array $shipping = null): Order
     {
         $quote = $this->quoteRepository->findOneBy(['customerId' => $customerId]);
 
@@ -37,6 +39,9 @@ class OrderService
         if ($quote->getItems()->isEmpty()) {
             throw new EmptyQuoteException('Quote has no items.');
         }
+
+        $billingData  = $billing  ? $this->fillAddress($billing)  : $this->resolveCustomerAddress($customerId);
+        $shippingData = $shipping ? $this->fillAddress($shipping) : $billingData;
 
         $this->em->beginTransaction();
 
@@ -83,6 +88,9 @@ class OrderService
                 $this->em->persist($orderItem);
             }
 
+            $order->addBillingAddress($billingData);
+            $order->addShippingAddress($shippingData);
+
             $this->em->persist($order);
             $this->em->remove($quote);
             $this->em->flush();
@@ -111,33 +119,47 @@ class OrderService
 
     public function getOrder(int $customerId, string $orderNumber): Order
     {
-        $cacheKey = sprintf('order_%d_%s', $customerId, $orderNumber);
-
-        $item = $this->redisCache->getItem($cacheKey);
-
-        if ($item->isHit()) {
-            return $item->get();
-        }
-
-        $order = $this->findOrder($customerId, $orderNumber);
-        $item->set($order)->expiresAfter(3600);
-        $this->redisCache->save($item);
-
-        return $order;
-    }
-
-    private function findOrder(int $customerId, string $orderNumber): Order
-    {
-        $order = $this->orderRepository->findOneBy([
-            'orderNumber' => $orderNumber,
-            'customerId'  => $customerId,
-        ]);
+        $order = $this->orderRepository->findOneByOrderNumber($customerId, $orderNumber);
 
         if (!$order) {
             throw new OrderNotFoundException('Order not found.');
         }
-        $order->getItems();
 
         return $order;
     }
+
+    private function resolveCustomerAddress(int $customerId): Address
+    {
+        $address = $this->customerAddressRepository->findByCustomerId($customerId);
+
+        if (!$address) {
+            throw new MissingBillingAddressException('No billing address found for this customer.');
+        }
+
+        return new Address(
+            firstName:   $address->getFirstName(),
+            lastName:    $address->getLastName(),
+            phone:       $address->getPhone(),
+            addressLine: $address->getAddressLine(),
+            district:    $address->getDistrict(),
+            city:        $address->getCity(),
+            postalCode:  $address->getPostalCode(),
+            countryCode: $address->getCountryCode(),
+        );
+    }
+
+    private function fillAddress(array $data): Address
+    {
+        return new Address(
+            firstName:   $data['first_name'],
+            lastName:    $data['last_name'],
+            phone:       $data['phone'],
+            addressLine: $data['address_line'],
+            district:    $data['district'],
+            city:        $data['city'],
+            postalCode:  $data['postal_code'],
+            countryCode: $data['country_code'] ?? 'TR',
+        );
+    }
+
 }

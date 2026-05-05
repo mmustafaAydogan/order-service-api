@@ -89,6 +89,18 @@ The campaign engine evaluates all active campaigns and applies the one with the 
 
 Shipping is calculated after the campaign discount is applied.
 
+## Caching
+
+Order show endpoint uses **Doctrine Second Level Cache (L2 Cache)** backed by Redis.
+
+| Entity | Cache Type | TTL |
+|--------|-----------|-----|
+| `Order` | READ_ONLY | 1h |
+| `OrderItem` collection | READ_ONLY | 1h |
+| `OrderAddress` collection | READ_ONLY | 1h |
+
+Config: `doctrine.yaml` → `second_level_cache`, pool: `doctrine.second_level_cache_pool` → `cache.app` (Redis).
+
 ## Request Logging
 
 Every API request is automatically logged to the `request_logs` table via `RequestLogListener`.

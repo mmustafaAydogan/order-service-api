@@ -8,6 +8,7 @@ use Symfony\Component\Serializer\Attribute\Groups;
 
 #[ORM\Entity(repositoryClass: OrderItemRepository::class)]
 #[ORM\Table(name: 'order_items')]
+#[ORM\Cache(usage: 'READ_ONLY')]
 class OrderItem
 {
     #[ORM\Id]
